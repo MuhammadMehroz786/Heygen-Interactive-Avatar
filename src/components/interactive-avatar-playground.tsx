@@ -614,7 +614,7 @@ export function InteractiveAvatarPlayground() {
               <>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Background</label>
-                  <Select value={backgroundType} onValueChange={setBackgroundType}>
+                  <Select value={backgroundType} onValueChange={(value) => setBackgroundType(value as 'none' | 'blur' | 'preset' | 'greenscreen')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
