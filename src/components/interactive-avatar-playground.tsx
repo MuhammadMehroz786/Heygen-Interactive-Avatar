@@ -11,6 +11,8 @@ import { useHeyGenAvatar } from "@/hooks/use-heygen-avatar";
 import { useVideoRecording } from "@/hooks/use-video-recording";
 import { useBackgroundEffects } from "@/hooks/use-background-effects";
 
+type BackgroundType = 'none' | 'blur' | 'preset' | 'greenscreen';
+
 export function InteractiveAvatarPlayground() {
   const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay compliance
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -614,7 +616,10 @@ export function InteractiveAvatarPlayground() {
               <>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Background</label>
-                  <Select value={backgroundType} onValueChange={(value) => setBackgroundType(value as 'none' | 'blur' | 'preset' | 'greenscreen')}>
+                  <Select value={backgroundType} onValueChange={(value: string) => {
+                    const bgType = value as BackgroundType;
+                    setBackgroundType(bgType);
+                  }}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

@@ -24,10 +24,9 @@ export function useVideoRecording() {
         stream = (videoElement as any).captureStream ? (videoElement as any).captureStream() : (videoElement as any).mozCaptureStream();
         
         if (!stream) {
-          // Fallback: capture the entire video element using getUserMedia with video constraints
-          stream = await navigator.mediaDevices.getUserMedia({
+          // Fallback: capture the entire video element using getDisplayMedia
+          stream = await navigator.mediaDevices.getDisplayMedia({
             video: {
-              mediaSource: 'screen',
               width: { ideal: 1280 },
               height: { ideal: 720 }
             },
