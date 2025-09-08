@@ -1,22 +1,26 @@
-# Interactive Avatar Playground
+# HeyGen Interactive Avatar App
 
-A Next.js starter for HeyGen Interactive Streaming Avatar service that demonstrates real-time avatar interaction with various features.
+A modern Next.js application featuring HeyGen's Interactive Streaming Avatar with voice input, text messaging, and real-time avatar interaction.
 
-## Features
+## ✨ Features
 
-- **Real-time Avatar Streaming**: Connect to HeyGen's Interactive Avatar API
-- **Voice Interaction**: Speech-to-text input and customizable voice settings
-- **Background Effects**: Remove, blur, or replace backgrounds
-- **Recording**: Capture screenshots and video recordings
-- **Conversation History**: Track chat transcript
-- **Responsive Design**: Works on desktop and mobile devices
+- 🎭 **Multiple Avatars**: Choose from Anthony's different poses (Black Suit, White Suit, Chair Sitting)
+- 🎤 **Continuous Voice Input**: Natural speech recognition for ongoing conversations
+- 💬 **Text Messaging**: Send messages via text input or voice
+- 🧠 **Knowledge Base Integration**: Enhanced responses powered by HeyGen's knowledge base
+- 🎨 **Background Effects**: Custom backgrounds with real-time processing (disabled for sitting avatar)
+- 📱 **Responsive Design**: Works seamlessly on desktop and mobile devices
+- 🔄 **Seamless Avatar Switching**: Automatic disconnect/reconnect when changing avatars
+- 📸 **Media Controls**: Screenshot capture, fullscreen mode, and media controls
 
-## Technology Stack
+## 🛠 Technology Stack
 
-- **Frontend**: Next.js 15, React 18, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui
-- **State Management**: Jotai
-- **Avatar Service**: HeyGen Interactive/Streaming Avatar
+- **Next.js 15.5.2** - React framework with App Router
+- **HeyGen Streaming Avatar SDK v2.1.0** - Interactive avatar integration
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **Radix UI** - Accessible component primitives
+- **Jotai** - State management
 
 ## Getting Started
 
@@ -88,9 +92,24 @@ This project integrates with HeyGen's Interactive Streaming Avatar API. You'll n
 2. Get your API key from the dashboard
 3. Add the key to your environment variables
 
-## Deployment
+## 🚀 Deployment
 
-Deploy easily on platforms like Vercel:
+### Deploy on Netlify
+
+1. **Connect Repository**: Link your GitHub repository to Netlify
+2. **Build Settings**: 
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+3. **Environment Variables**: Add `HEYGEN_API_KEY=your_api_key_here`
+4. **Deploy**: Click deploy!
+
+### Deploy on Vercel
+
+1. Connect your GitHub repository to Vercel
+2. Add environment variable: `HEYGEN_API_KEY=your_api_key_here`
+3. Deploy automatically
+
+### Local Build
 
 ```bash
 npm run build

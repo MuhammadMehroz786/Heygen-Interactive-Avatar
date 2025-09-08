@@ -16,11 +16,11 @@ export function InteractiveAvatarPlayground() {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState("Anthony_Black_Suit_public");
-  const [apiKey, setApiKey] = useState(process.env.NEXT_PUBLIC_HEYGEN_API_KEY || "");
   const [voice, setVoice] = useState("default");
   const [voiceRate, setVoiceRate] = useState(1.0);
   const [voiceEmotion, setVoiceEmotion] = useState("FRIENDLY");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSwitchingAvatar, setIsSwitchingAvatar] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -44,9 +44,7 @@ export function InteractiveAvatarPlayground() {
     stopListening,
     clearTranscript,
     updateVoiceSettings,
-    validateApiKey,
   } = useHeyGenAvatar({
-    apiKey,
     avatarId: selectedAvatar,
     voiceId: voice,
     voiceRate: voiceRate,
@@ -76,12 +74,8 @@ export function InteractiveAvatarPlayground() {
 
 
   const handleConnect = useCallback(async () => {
-    if (!apiKey) {
-      alert("Please enter your HeyGen API key");
-      return;
-    }
     await connect();
-  }, [apiKey, connect]);
+  }, [connect]);
 
   const handleDisconnect = useCallback(async () => {
     await disconnect();
@@ -334,12 +328,16 @@ export function InteractiveAvatarPlayground() {
                 </div>
               )}
               
-              {isConnected && !videoRef.current?.srcObject && (
+              {(isConnected && !videoRef.current?.srcObject) || isSwitchingAvatar && (
                 <div className="absolute inset-0 flex items-center justify-center text-white">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-                    <p className="text-lg">Loading avatar stream...</p>
-                    <p className="text-sm opacity-70">Waiting for video stream</p>
+                    <p className="text-lg">
+                      {isSwitchingAvatar ? "Switching avatar..." : "Loading avatar stream..."}
+                    </p>
+                    <p className="text-sm opacity-70">
+                      {isSwitchingAvatar ? "Connecting to new avatar" : "Waiting for video stream"}
+                    </p>
                   </div>
                 </div>
               )}
@@ -416,7 +414,7 @@ export function InteractiveAvatarPlayground() {
                     disabled={!isConnected}
                     title={isListening ? "Stop Voice Input" : "Start Voice Input"}
                   >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
                   </Button>
                   <Button
                     size="sm"
@@ -462,36 +460,43 @@ export function InteractiveAvatarPlayground() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">HeyGen API Key</label>
-              <Input
-                type="password"
-                placeholder="Enter your API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              {apiKey && (
-                <div className="mt-1">
-                  {(() => {
-                    const validation = validateApiKey(apiKey);
-                    return (
-                      <div className={`text-xs flex items-center gap-1 ${
-                        validation.isValid ? 'text-green-600' : 'text-amber-600'
-                      }`}>
-                        {validation.isValid ? '✓' : '⚠'}
-                        <span>{validation.message}</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-            <div>
               <label className="text-sm font-medium mb-2 block">Avatar</label>
-              <Select value={selectedAvatar} onValueChange={(newAvatar) => {
+              <Select value={selectedAvatar} onValueChange={async (newAvatar) => {
+                const wasConnected = isConnected;
+                
+                console.log("🔄 Avatar selection changed to:", newAvatar);
+                
+                if (wasConnected) {
+                  setIsSwitchingAvatar(true);
+                  console.log("🔄 Avatar changed - disconnecting current session...");
+                  await disconnect();
+                }
+                
+                // Update avatar selection immediately
                 setSelectedAvatar(newAvatar);
+                console.log("✅ Avatar state updated to:", newAvatar);
+                
                 // Reset background to none for sitting avatar
                 if (newAvatar === "Anthony_Chair_Sitting_public") {
                   setBackgroundType("none");
+                }
+                
+                // Auto-reconnect with new avatar if we were connected before
+                if (wasConnected) {
+                  console.log("🔄 Auto-reconnecting with new avatar:", newAvatar);
+                  // Use a shorter delay and ensure the new avatar is used
+                  setTimeout(async () => {
+                    try {
+                      console.log("🚀 Connecting to specific avatar:", newAvatar);
+                      await connect(newAvatar); // Pass the specific avatar ID
+                    } catch (error) {
+                      console.error("❌ Failed to reconnect:", error);
+                    } finally {
+                      setIsSwitchingAvatar(false);
+                    }
+                  }, 500); // Shorter delay
+                } else {
+                  setIsSwitchingAvatar(false);
                 }
               }}>
                 <SelectTrigger>
@@ -534,11 +539,13 @@ export function InteractiveAvatarPlayground() {
             )}
             <Button
               onClick={isConnected ? handleDisconnect : handleConnect}
-              disabled={isLoading || !apiKey}
+              disabled={isLoading || isSwitchingAvatar}
               className="w-full"
               variant={isConnected ? "destructive" : "default"}
             >
-              {isLoading ? (sdkLoading ? "Loading SDK..." : "Connecting...") : isConnected ? "Disconnect" : "Connect"}
+              {isSwitchingAvatar ? "Switching Avatar..." : 
+               isLoading ? (sdkLoading ? "Loading SDK..." : "Connecting...") : 
+               isConnected ? "Disconnect" : "Connect"}
             </Button>
           </CardContent>
         </Card>
@@ -578,16 +585,18 @@ export function InteractiveAvatarPlayground() {
                 size="icon"
                 title={isListening ? "Stop Voice Input" : "Start Voice Input"}
               >
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
               </Button>
             </div>
             <div className="text-xs text-muted-foreground">
               Press Enter to send message or use voice input
               {isListening && (
-                <span className="text-green-600 ml-2">🎤 Listening...</span>
+                <span className="text-green-600 ml-2 animate-pulse">🎤 Listening continuously...</span>
               )}
               <br />
-              <span className="text-blue-600">Voice settings apply to next message</span>
+              <span className="text-blue-600">
+                {isListening ? "Voice is active - speak anytime!" : "Voice settings apply to next message"}
+              </span>
             </div>
           </CardContent>
         </Card>

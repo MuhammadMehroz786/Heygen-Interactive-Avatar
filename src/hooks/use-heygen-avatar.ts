@@ -5,7 +5,6 @@ import StreamingAvatar, { StreamingEvents, VoiceEmotion, AvatarQuality } from "@
 import type { TranscriptEntry } from "@/store/atoms";
 
 interface HeyGenAvatarProps {
-  apiKey: string;
   avatarId: string;
   voiceId: string;
   voiceRate: number;
@@ -13,7 +12,6 @@ interface HeyGenAvatarProps {
 }
 
 export function useHeyGenAvatar({
-  apiKey,
   avatarId,
   voiceId,
   voiceRate,
@@ -35,14 +33,14 @@ export function useHeyGenAvatar({
   const [sdkError] = useState<string | null>(null);
   const [sdkLoading] = useState(false);
 
-  const validateApiKey = useCallback((key: string) => {
-    if (!key) return { isValid: false, message: 'API key is required' };
-    if (key.length < 20) return { isValid: false, message: 'API key appears to be too short' };
-    return { isValid: true, message: 'API key format looks correct' };
+
+  const getKnowledgeBaseId = useCallback(() => {
+    return 'b95a5eeb13d5438c99106fa82407ccf7';
   }, []);
 
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (specificAvatarId?: string) => {
+    const targetAvatarId = specificAvatarId || avatarId;
     setIsLoading(true);
     setError(null);
 
@@ -158,10 +156,18 @@ export function useHeyGenAvatar({
         voiceEmotion
       });
 
-      console.log("🚀 Testing with avatar ID:", avatarId);
+      const knowledgeBaseId = getKnowledgeBaseId();
+      
+      console.log("🚀 Creating avatar session:", {
+        targetAvatarId,
+        originalAvatarId: avatarId,
+        knowledgeBaseId,
+        timestamp: new Date().toISOString()
+      });
       
       const response = await avatar.createStartAvatar({
-        avatarName: avatarId,
+        avatarName: targetAvatarId,
+        knowledgeId: knowledgeBaseId,
       });
 
       console.log("✅ Avatar session created successfully:", response);
@@ -200,7 +206,7 @@ export function useHeyGenAvatar({
     } finally {
       setIsLoading(false);
     }
-  }, [avatarId, voiceRate, voiceEmotion]);
+  }, [avatarId, voiceRate, voiceEmotion, getKnowledgeBaseId]);
 
   const disconnect = useCallback(async () => {
     if (streamingAvatarRef.current) {
@@ -271,39 +277,79 @@ export function useHeyGenAvatar({
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true; // Keep listening continuously
+    recognition.interimResults = true; // Show interim results
     recognition.lang = 'en-US';
 
     recognition.onstart = () => {
+      console.log("🎤 Voice recognition started - continuous mode");
       setIsListening(true);
       setError(null);
     };
 
     recognition.onresult = (event) => {
-      const result = event.results[0][0].transcript;
-      if (result.trim()) {
-        speak(result);
+      let finalTranscript = '';
+      
+      // Process all results
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        }
+      }
+      
+      // Send final transcript to avatar
+      if (finalTranscript.trim()) {
+        console.log("🗣️ Final speech:", finalTranscript);
+        speak(finalTranscript.trim());
       }
     };
 
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
-      setError(`Speech recognition error: ${event.error}`);
+      
+      // Handle specific errors
+      if (event.error === 'no-speech') {
+        console.log("⏳ No speech detected, continuing to listen...");
+        // Don't stop on no-speech, just continue
+        return;
+      }
+      
+      if (event.error === 'network') {
+        setError("Network error during speech recognition. Please check your connection.");
+      } else if (event.error === 'not-allowed') {
+        setError("Microphone access denied. Please allow microphone access.");
+      } else {
+        setError(`Speech recognition error: ${event.error}`);
+      }
+      
       setIsListening(false);
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      console.log("🎤 Voice recognition ended");
+      // If we're still supposed to be listening, restart
+      if (recognitionRef.current === recognition) {
+        setIsListening(false);
+      }
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
+    
+    try {
+      recognition.start();
+    } catch (error) {
+      console.error("Failed to start speech recognition:", error);
+      setError("Failed to start voice recognition");
+      setIsListening(false);
+    }
   }, [speak]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
+      console.log("🔇 Stopping voice recognition");
       recognitionRef.current.stop();
+      recognitionRef.current = null;
       setIsListening(false);
     }
   }, []);
@@ -346,6 +392,5 @@ export function useHeyGenAvatar({
     stopListening,
     clearTranscript,
     updateVoiceSettings,
-    validateApiKey,
   };
 }
