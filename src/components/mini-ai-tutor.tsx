@@ -22,7 +22,7 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hello! I'm your AI Tutor specialized in AI-related topics. How can I help you today?",
+      content: "Hi! Ask me about AI, ML, or tech topics.",
       role: 'assistant',
       timestamp: new Date()
     }
@@ -30,6 +30,7 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [userName, setUserName] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -42,43 +43,44 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
   }, [messages]);
 
   const generateAIResponse = (userMessage: string): string => {
-    const lowercaseMessage = userMessage.toLowerCase();
+    const message = userMessage.trim();
+    const lowerMessage = message.toLowerCase();
     
-    // Check if message is AI-related
-    const aiKeywords = ['ai', 'artificial intelligence', 'machine learning', 'ml', 'deep learning', 
-                       'neural network', 'chatgpt', 'llm', 'large language model', 'prompt', 
-                       'algorithm', 'data science', 'nlp', 'computer vision', 'tensorflow', 
-                       'pytorch', 'automation', 'robotics'];
-    
-    const isAIRelated = aiKeywords.some(keyword => lowercaseMessage.includes(keyword));
-    
-    if (!isAIRelated) {
-      return "I specialize in AI-related topics only. Please ask about artificial intelligence, machine learning, or related technologies.";
-    }
-
-    // Professional, concise responses for AI topics
-    if (lowercaseMessage.includes('prompt') || lowercaseMessage.includes('chatgpt')) {
-      return "For effective prompts: Be specific, provide context, use clear instructions, and iterate based on results.";
+    // Extract and remember user's name
+    const namePattern = /i'm\s+([a-zA-Z]+)|my\s+name\s+is\s+([a-zA-Z]+)|call\s+me\s+([a-zA-Z]+)/i;
+    const nameMatch = message.match(namePattern);
+    if (nameMatch) {
+      const extractedName = nameMatch[1] || nameMatch[2] || nameMatch[3];
+      setUserName(extractedName);
+      return `Nice to meet you, ${extractedName}! What AI topic interests you?`;
     }
     
-    if (lowercaseMessage.includes('machine learning') || lowercaseMessage.includes('ml')) {
-      return "Machine learning uses algorithms to find patterns in data. Key types: supervised, unsupervised, and reinforcement learning.";
+    // Handle name questions
+    if (lowerMessage.includes("my name") || lowerMessage === "what's my name") {
+      return userName ? `Your name is ${userName}.` : "I don't know your name yet. You can tell me!";
     }
     
-    if (lowercaseMessage.includes('neural network') || lowercaseMessage.includes('deep learning')) {
-      return "Neural networks mimic brain neurons to process data. Deep learning uses multiple layers for complex pattern recognition.";
+    // Simple greetings
+    if (/^(hi|hello|hey)$/i.test(lowerMessage)) {
+      return userName ? `Hi ${userName}! What can I help with?` : "Hi! What AI topic can I help with?";
     }
     
-    if (lowercaseMessage.includes('ai ethics') || lowercaseMessage.includes('bias')) {
-      return "AI ethics focuses on fairness, transparency, accountability, and avoiding harmful bias in AI systems.";
-    }
+    // AI topic responses - very concise
+    if (lowerMessage.includes('chatgpt')) return "ChatGPT: Be specific, use examples, iterate prompts.";
+    if (lowerMessage.includes('prompt')) return "Good prompts: Clear context + specific instructions.";
+    if (lowerMessage.includes('machine learning')) return "ML: Algorithms learn from data patterns.";
+    if (lowerMessage.includes('python')) return "Python AI: pandas, numpy, scikit-learn, tensorflow.";
+    if (lowerMessage.includes('ai tools')) return "Popular: ChatGPT, Claude, Midjourney, GitHub Copilot.";
+    if (lowerMessage.includes('deep learning')) return "Deep learning: Neural networks with multiple layers.";
+    if (lowerMessage.includes('data science')) return "Data science: Stats + coding + domain knowledge.";
     
-    if (lowercaseMessage.includes('data science')) {
-      return "Data science combines statistics, programming, and domain knowledge to extract insights from data.";
-    }
+    // Check if AI-related
+    const aiTerms = ['ai', 'ml', 'algorithm', 'neural', 'coding', 'programming', 'automation'];
+    const isAI = aiTerms.some(term => lowerMessage.includes(term));
     
-    // Default professional response
-    return "That's an interesting AI question. Could you be more specific about which aspect you'd like to explore?";
+    if (!isAI) return "I focus on AI topics. Ask about ML, programming, or AI tools.";
+    
+    return "Could you be more specific about the AI topic?";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +109,7 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
       
       setMessages(prev => [...prev, aiResponse]);
       setIsLoading(false);
-    }, 800);
+    }, 300);
   };
 
   if (isMinimized) {
