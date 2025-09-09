@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,9 +42,16 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
     scrollToBottom();
   }, [messages]);
 
-  const generateAIResponse = (userMessage: string): string => {
+  const generateAIResponse = useCallback((userMessage: string): string => {
     const message = userMessage.trim();
     const lowerMessage = message.toLowerCase();
+    
+    // Get recent conversation context (last 5 messages for context)
+    const recentMessages = messages.slice(-5);
+    const previousTopics = recentMessages
+      .filter(msg => msg.role === 'user')
+      .map(msg => msg.content.toLowerCase())
+      .join(' ');
     
     // Extract and remember user's name
     const namePattern = /i'm\s+([a-zA-Z]+)|my\s+name\s+is\s+([a-zA-Z]+)|call\s+me\s+([a-zA-Z]+)/i;
@@ -58,6 +65,40 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
     // Handle name questions
     if (lowerMessage.includes("my name") || lowerMessage === "what's my name") {
       return userName ? `Your name is ${userName}.` : "I don't know your name yet. You can tell me!";
+    }
+    
+    // Context-aware responses based on conversation history
+    if (lowerMessage.includes("more about") || lowerMessage.includes("tell me more")) {
+      if (previousTopics.includes('chatgpt')) return "ChatGPT advanced: Use system prompts, temperature settings, and few-shot examples.";
+      if (previousTopics.includes('machine learning')) return "ML deep dive: Try scikit-learn for basics, then TensorFlow/PyTorch for deep learning.";
+      if (previousTopics.includes('python')) return "Python next steps: Master pandas, numpy, then explore ML libraries like scikit-learn.";
+      return "What specific topic from our chat interests you more?";
+    }
+    
+    // Follow-up questions with context
+    if (lowerMessage.includes("how") || lowerMessage.includes("what's the best way")) {
+      if (previousTopics.includes('chatgpt')) return "Start with clear, specific prompts. Add examples. Iterate based on results.";
+      if (previousTopics.includes('python')) return "Practice with real projects. Start small, use documentation, join communities.";
+      if (previousTopics.includes('machine learning')) return "Begin with Python basics, then statistics, then hands-on ML projects.";
+    }
+    
+    // Context continuation responses
+    if (lowerMessage.includes("and what about") || lowerMessage.includes("what else")) {
+      if (previousTopics.includes('chatgpt')) return "Also try: Chain prompts together, use role-playing, and adjust response length.";
+      if (previousTopics.includes('python')) return "Also learn: Virtual environments, debugging tools, and version control with Git.";
+      if (previousTopics.includes('machine learning')) return "Also explore: Feature engineering, model validation, and hyperparameter tuning.";
+    }
+    
+    // Reference previous conversation
+    if (lowerMessage.includes("you mentioned") || lowerMessage.includes("earlier you said")) {
+      const lastBotMessage = recentMessages.filter(msg => msg.role === 'assistant').slice(-1)[0];
+      if (lastBotMessage) {
+        const topic = lastBotMessage.content.toLowerCase();
+        if (topic.includes('chatgpt')) return "Yes, ChatGPT works best with specific, detailed prompts and examples.";
+        if (topic.includes('python')) return "Right, Python has the best AI/ML ecosystem with libraries like pandas and scikit-learn.";
+        if (topic.includes('machine learning')) return "Exactly, ML is about finding patterns in data through various algorithms.";
+      }
+      return "Could you be more specific about what I mentioned?";
     }
     
     // Simple greetings
@@ -81,15 +122,16 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
     if (!isAI) return "I focus on AI topics. Ask about ML, programming, or AI tools.";
     
     return "Could you be more specific about the AI topic?";
-  };
+  }, [userName, messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    const userInput = input.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input.trim(),
+      content: userInput,
       role: 'user',
       timestamp: new Date()
     };
@@ -102,7 +144,7 @@ export function MiniAITutor({ className = "", onClose }: MiniAITutorProps) {
     setTimeout(() => {
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: generateAIResponse(input.trim()),
+        content: generateAIResponse(userInput),
         role: 'assistant',
         timestamp: new Date()
       };
