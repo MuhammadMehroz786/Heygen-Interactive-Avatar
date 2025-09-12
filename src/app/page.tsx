@@ -1,5 +1,4 @@
 import { InteractiveAvatarPlayground } from "@/components/interactive-avatar-playground";
-import { MiniAITutor } from "@/components/mini-ai-tutor";
 
 export default function Home() {
   return (
@@ -11,7 +10,6 @@ export default function Home() {
         </p>
       </div>
       <InteractiveAvatarPlayground />
-      <MiniAITutor />
     </main>
   );
 }
